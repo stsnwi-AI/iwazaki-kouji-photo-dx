@@ -23,11 +23,11 @@ nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid 
 <header><h1>岩﨑電気工事｜工事写真DX V2.1</h1><small id="head">現場で撮るだけ。写真整理を自動化。</small></header>
 <main>
 <section id="home">
-<div class="card"><h2>📁 現場</h2><div id="jobs"></div><button class="big secondary" onclick="show('new')">＋ 新しい工事</button></div>
+<div class="card"><h2>① 現場登録・選択</h2><div id="jobs"></div><button class="big secondary" onclick="show('new')">＋ 新しい工事</button></div>
 <div class="card"><h2>📊 本日の状況</h2><div id="today"></div></div>
 </section>
 
-<section id="new" class="hidden"><div class="card"><button class="secondary" onclick="home()">← 戻る</button><h2 style="margin-top:12px">新しい工事</h2>
+<section id="new" class="hidden"><div class="card"><button class="secondary" onclick="home()">← 戻る</button><h2 style="margin-top:12px">① 現場を登録</h2>
 <label>工事名</label><input id="jn" placeholder="例：○○ビル電気設備工事">
 <label>工事番号</label><input id="jno" placeholder="例：2026-001">
 <label>現場住所</label><input id="ja" placeholder="任意">
@@ -35,20 +35,20 @@ nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid 
 <button class="big" onclick="createJob()">工事を作成</button></div></section>
 
 <section id="job" class="hidden"><div class="card"><button class="secondary" onclick="home()">← 工事一覧</button>
-<h2 id="jt" style="margin-top:12px"></h2><div id="ji" class="muted"></div></div>
-<div class="card"><h2>① 場所を選択</h2><div id="locations" class="grid"></div><div class="row" style="margin-top:8px"><input id="nf" placeholder="階数（例：3階）"><input id="nr" placeholder="部屋名・場所（例：301会議室）"><button onclick="addLocation()">追加</button></div><div id="locHint" class="muted" style="margin-top:8px">先に階数と部屋名・場所を登録してください。</div></div>
+<h2 id="jt" style="margin-top:12px"></h2><div id="ji" class="muted"></div><div class="notice" style="margin-top:10px"><b>撮影の進め方</b><br>①現場登録 → ②場所（階数・部屋名・場所）を選択 → ③作業を選択 → ④施工前・施工中・施工後を選択 → ⑤撮影<div class="row" style="margin-top:8px"><button class="secondary" onclick="document.getElementById('locations').scrollIntoView({behavior:'smooth'})">② 場所へ進む</button><button class="secondary" onclick="goTask()">③ 作業へ進む</button></div></div></div>
+<div class="card"><h2>② 場所を選択</h2><div id="locations" class="grid"></div><div class="row" style="margin-top:8px"><input id="nf" placeholder="階数（例：3階）"><input id="nr" placeholder="部屋名（例：301会議室）"><input id="np" placeholder="場所・区画（例：南側）"><button onclick="addLocation()">追加</button></div><div id="locHint" class="muted" style="margin-top:8px">先に「階数・部屋名・場所」の3項目を登録してください。</div></div>
 <div id="taskCard" class="card hidden"><h2>② 作業を選択</h2><div id="tasks" class="grid"></div><div class="row" style="margin-top:8px"><input id="nt" placeholder="作業を追加"><button onclick="addTask()">追加</button></div></div>
-<div id="capture" class="card hidden"><h2>③ <span id="st"></span></h2>
-<div class="row"><select id="phase"><option>施工前</option><option>施工中</option><option>施工後</option></select><input id="comment" placeholder="コメント（任意）"></div>
+<div id="capture" class="card hidden"><h2>④ 施工段階・撮影<br><span id="st"></span></h2>
+<div id="shootSummary" class="notice" style="margin-bottom:8px"></div><div class="row"><select id="phase"><option>施工前</option><option>施工中</option><option>施工後</option></select><input id="comment" placeholder="コメント（任意）"></div>
 <input id="cam" type="file" accept="image/*" capture="environment" class="hidden" onchange="photo(event)">
 <button class="big" onclick="document.getElementById('cam').click()">📷 撮影する</button>
 <div id="pc" class="muted"></div><div id="pg" class="photos"></div></div>
-<div class="card"><h2>④ 写真提出</h2><button class="big secondary" onclick="exportJob()">📦 この工事をZIP出力</button></div></section>
+<div class="card"><h2>⑥ 写真提出</h2><button class="big secondary" onclick="exportJob()">📦 この工事をZIP出力</button></div></section>
 
 <section id="settings" class="hidden"><div class="card"><h2>⚙️ V2 管理</h2>
 <p class="muted">写真は端末内のブラウザデータベースに保存します。定期的にZIP出力してください。</p>
-<button class="big secondary" onclick="exportAll()">📦 全工事をZIP出力</button>
-<button class="big danger" onclick="clearData()">全データ削除</button></div>
+<button class="big secondary" onclick="exportAll()">📦 全工事をZIP出力</button><div id="manageJobs" style="margin-top:10px"></div>
+<button class="big danger" onclick="clearData()">⚠️ 全データ削除</button></div>
 <div class="card"><h2>🚧 次期開発</h2><span class="badge">電子小黒板</span><span class="badge">GPS</span><span class="badge">写真台帳Excel/PDF</span><span class="badge">クラウド共有</span><span class="badge">撮影漏れチェック</span></div></section>
 </main>
 <nav><button id="nh" class="active" onclick="home()">🏠<br>現場</button><button id="ns" onclick="show('settings')">⚙️<br>管理</button></nav>
@@ -61,18 +61,19 @@ let r=indexedDB.open("iwasaki_v2",1);r.onupgradeneeded=e=>{db=e.target.result;db
 const all=s=>new Promise((ok,no)=>{let r=db.transaction(s).objectStore(s).getAll();r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 const put=(s,o)=>new Promise((ok,no)=>{let r=db.transaction(s,"readwrite").objectStore(s).put(o);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 const add=(s,o)=>new Promise((ok,no)=>{let r=db.transaction(s,"readwrite").objectStore(s).add(o);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
-function show(id){["home","new","job","settings"].forEach(x=>document.getElementById(x).classList.add("hidden"));document.getElementById(id).classList.remove("hidden");document.getElementById("nh").classList.toggle("active",id==="home"||id==="job");document.getElementById("ns").classList.toggle("active",id==="settings")}
+function show(id){["home","new","job","settings"].forEach(x=>document.getElementById(x).classList.add("hidden"));document.getElementById(id).classList.remove("hidden");if(id==="settings")renderManageJobs();document.getElementById("nh").classList.toggle("active",id==="home"||id==="job");document.getElementById("ns").classList.toggle("active",id==="settings")}
 function home(){job=null;selectedLocation=null;task=null;show("home");renderJobs();renderToday()}
 async function renderJobs(){let a=await all("jobs");document.getElementById("jobs").innerHTML=a.length?a.map(j=>`<button class="big secondary" onclick="openJob('${j.id}')">📁 ${e(j.name)}<br><small>${e(j.no||"")} ${e(j.address||"")}</small></button>`).join(""):'<div class="empty">工事を登録してください</div>'}
 async function renderToday(){let p=await all("photos"),d=fmt(new Date());let n=p.filter(x=>fmt(new Date(x.time))===d).length;document.getElementById("today").innerHTML=`本日の撮影枚数：<b>${n}枚</b>`}
 async function createJob(){let n=document.getElementById("jn").value.trim();if(!n)return alert("工事名を入力してください");let j={id:"j"+Date.now(),name:n,no:document.getElementById("jno").value.trim(),address:document.getElementById("ja").value.trim(),contact:document.getElementById("jc").value.trim(),tasks:[...DEFAULT],locations:[]};await put("jobs",j);openJob(j.id)}
 async function openJob(id){job=(await all("jobs")).find(x=>x.id===id);job.locations=job.locations||[];document.getElementById("jt").textContent="📁 "+job.name;document.getElementById("ji").textContent=[job.no,job.address,job.contact].filter(Boolean).join(" ｜ ");selectedLocation=null;task=null;renderLocations();renderTasks();document.getElementById("capture").classList.add("hidden");document.getElementById("taskCard").classList.add("hidden");show("job")}
-function renderLocations(){document.getElementById("locations").innerHTML=job.locations.length?job.locations.map((l,i)=>`<button class="task ${selectedLocation&&selectedLocation.id===l.id?"active":""}" onclick="selectLocation('${l.id}')">📍 ${e(l.floor)}<br><small>${e(l.room)}</small></button>`).join(""):`<div class="empty" style="grid-column:1/-1">場所を登録してください</div>`;document.getElementById("locHint").textContent=job.locations.length?"場所を選択すると、作業項目を選べます。":"先に階数と部屋名・場所を登録してください。"}
-async function addLocation(){let f=document.getElementById("nf").value.trim(),r=document.getElementById("nr").value.trim();if(!f||!r)return alert("階数と部屋名・場所を入力してください");job.locations=job.locations||[];job.locations.push({id:"l"+Date.now(),floor:f,room:r});await put("jobs",job);document.getElementById("nf").value="";document.getElementById("nr").value="";renderLocations()}
+function renderLocations(){document.getElementById("locations").innerHTML=job.locations.length?job.locations.map((l,i)=>`<button class="task ${selectedLocation&&selectedLocation.id===l.id?"active":""}" onclick="selectLocation('${l.id}')">📍 ${e(l.floor)}<br><small>${e(l.room)}${l.place?"｜"+e(l.place):""}</small></button>`).join(""):`<div class="empty" style="grid-column:1/-1">場所を登録してください</div>`;document.getElementById("locHint").textContent=job.locations.length?"場所を選択すると、③作業を選べます。":"先に「階数・部屋名・場所」の3項目を登録してください。"}
+async function addLocation(){let f=document.getElementById("nf").value.trim(),r=document.getElementById("nr").value.trim(),p=document.getElementById("np").value.trim();if(!f||!r||!p)return alert("階数・部屋名・場所の3項目を入力してください");job.locations=job.locations||[];job.locations.push({id:"l"+Date.now(),floor:f,room:r,place:p});await put("jobs",job);document.getElementById("nf").value="";document.getElementById("nr").value="";document.getElementById("np").value="";renderLocations()}
+function goTask(){if(!selectedLocation){alert("先に②の場所を選択してください");document.getElementById("locations").scrollIntoView({behavior:"smooth"});return}document.getElementById("taskCard").scrollIntoView({behavior:"smooth"})}
 function selectLocation(id){selectedLocation=job.locations.find(x=>x.id===id);task=null;renderLocations();renderTasks();document.getElementById("taskCard").classList.remove("hidden");document.getElementById("capture").classList.add("hidden")}
 function renderTasks(){document.getElementById("tasks").innerHTML=job.tasks.map(t=>`<button class="task ${task===t?"active":""}" onclick="selectTask('${e(t)}')">${e(t)}</button>`).join("")}
 async function addTask(){let t=document.getElementById("nt").value.trim();if(!t)return;job.tasks.push(t);await put("jobs",job);document.getElementById("nt").value="";renderTasks()}
-async function selectTask(t){if(!selectedLocation)return alert("先に場所を選択してください");task=t;document.getElementById("st").textContent=`${selectedLocation.floor}・${selectedLocation.room}｜${t}`;document.getElementById("capture").classList.remove("hidden");renderTasks();await renderPhotos()}
+async function selectTask(t){if(!selectedLocation)return alert("先に場所を選択してください");task=t;document.getElementById("st").textContent=`${selectedLocation.floor}・${selectedLocation.room}・${selectedLocation.place||""}｜${t}`;document.getElementById("shootSummary").innerHTML=`<b>この条件で撮影します</b><br>階数：${e(selectedLocation.floor)}<br>部屋名：${e(selectedLocation.room)}<br>場所：${e(selectedLocation.place||"")}<br>作業：${e(t)}`;document.getElementById("capture").classList.remove("hidden");renderTasks();await renderPhotos()}
 async function renderPhotos(){let a=(await all("photos")).filter(p=>p.jobId===job.id&&p.locationId===selectedLocation?.id&&p.task===task).sort((a,b)=>b.time-a.time);document.getElementById("pc").textContent=`${a.length}枚`;document.getElementById("pg").innerHTML=a.map(p=>`<img src="${p.data}" title="${p.filename}">`).join("")}
 async function photo(ev){let f=ev.target.files[0];if(!f)return;let data=await resize(f,1800),d=new Date(),allp=await all("photos"),seq=allp.filter(p=>p.jobId===job.id&&p.locationId===selectedLocation.id&&p.task===task).length+1,ph=document.getElementById("phase").value,co=document.getElementById("comment").value.trim();let fn=`${fmt(d)}_${safe(selectedLocation.floor)}_${safe(selectedLocation.room)}_${safe(task)}_${ph}_${String(seq).padStart(3,"0")}.jpg`;await add("photos",{jobId:job.id,jobName:job.name,locationId:selectedLocation.id,floor:selectedLocation.floor,room:selectedLocation.room,task,phase:ph,comment:co,filename:fn,time:Date.now(),data});document.getElementById("comment").value="";ev.target.value="";await renderPhotos();renderToday()}
 function resize(f,max){return new Promise(ok=>{let im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{let s=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.88));URL.revokeObjectURL(u)};im.src=u})}
@@ -80,6 +81,8 @@ function fmt(d){return d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+St
 function safe(s){return s.replace(/[\\/:*?"<>|]/g,"_")}function e(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
 async function makeZip(js){let ps=await all("photos"),z=new JSZip(),n=0;for(let j of js){for(let p of ps.filter(x=>x.jobId===j.id)){z.folder(safe(j.name)).folder(safe(p.floor||"場所未設定")).folder(safe(p.room||"場所未設定")).folder(safe(p.task)).folder(safe(p.phase)).file(p.filename,p.data.split(",")[1],{base64:true});n++}}if(!n)return alert("写真がありません");let b=await z.generateAsync({type:"blob"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="岩﨑電気工事_工事写真_"+fmt(new Date())+".zip";a.click()}
 async function exportJob(){await makeZip([job])}async function exportAll(){await makeZip(await all("jobs"))}
+async function renderManageJobs(){let js=await all("jobs"),ps=await all("photos");document.getElementById("manageJobs").innerHTML=js.length?'<h3 style="margin:12px 0 6px">現場ごとの管理</h3>'+js.map(j=>{let n=ps.filter(p=>p.jobId===j.id).length;return `<div class="card" style="padding:10px;margin:6px 0"><b>📁 ${e(j.name)}</b><br><small>${n}枚</small><button class="big danger" onclick="deleteJob('${j.id}')">この現場を削除</button></div>`}).join(""):'<div class="empty">登録された現場はありません</div>'}
+async function deleteJob(id){let j=(await all("jobs")).find(x=>x.id===id);if(!j)return;if(!confirm(`「${j.name}」と、この現場の写真を削除しますか？`))return;let photos=await all("photos"),ids=photos.filter(p=>p.jobId===id).map(p=>p.id);let tx=db.transaction(["jobs","photos"],"readwrite"),jo=tx.objectStore("jobs"),po=tx.objectStore("photos");jo.delete(id);ids.forEach(x=>po.delete(x));tx.oncomplete=()=>{if(job&&job.id===id)home();else renderManageJobs();}}
 async function clearData(){if(!confirm("全データを削除しますか？"))return;db.transaction("jobs","readwrite").objectStore("jobs").clear();db.transaction("photos","readwrite").objectStore("photos").clear();home()}
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js");
 </script></body></html>
