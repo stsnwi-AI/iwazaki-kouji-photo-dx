@@ -55,3 +55,10 @@ V3.4追加：ZIP内に photo_manifest.json と photo_manifest.csv を自動同�
 
 
 V3.4追加：撮影順とは別に台帳順を管理。作業項目の上下移動、個別写真の上下移動、photo_manifest.json/csvへsortOrder（台帳順）を出力。Ver43取込側は台帳順を優先して配置する。
+
+
+## V3.5 変更点
+- ⑤「台帳の写真順」を④撮影画面の直下へ移動。
+- 作業項目単位の並び替えを廃止。
+- 撮影済み写真そのものを↑↓で並び替える方式へ一本化。
+- 写真の並び順を ledgerOrder / manifest の sortOrder として保存し、Ver43取込順に使用。
