@@ -1,4 +1,4 @@
-# 岩﨑電気工事 工事写真DX V3.9.1
+# 岩﨑電気工事 工事写真DX V3.9.2
 
 V3.9.0を基準に黒板表示を調整。
 
@@ -9,4 +9,4 @@ V3.9.0を基準に黒板表示を調整。
 - 撮影後でも提出欄の大・中・小を変更してZIP/Ver43 Excelを再出力可能
 - 元写真は変更しない
 - Ver43 Excel仕様はV3.8.9/V3.9.0系を維持
-- PWA表示・manifest・Service WorkerをV3.9.1へ更新
+- PWA表示・manifest・Service WorkerをV3.9.2へ更新
