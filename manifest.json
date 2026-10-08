@@ -1,1 +1,23 @@
-{"name":"岩﨑電気工事 工事写真DX V3.9.4","short_name":"工事写真DX","start_url":"./?v=394","display":"standalone","background_color":"#f3f5f7","theme_color":"#123b5d","lang":"ja"}
+{
+  "name": "岩﨑電気工事 工事写真DX V3.9.5",
+  "short_name": "工事写真DX",
+  "start_url": "./?v=395",
+  "display": "standalone",
+  "background_color": "#f3f5f7",
+  "theme_color": "#123b5d",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
