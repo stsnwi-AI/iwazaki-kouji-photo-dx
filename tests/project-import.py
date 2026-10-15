@@ -39,10 +39,26 @@ with sync_playwright() as pw:
  answers[:]=[False];load(archive());assert p.evaluate("async()=> (await all('jobs')).length")==2;assert p.evaluate("async()=> (await all('photos')).length")==90;print('PASS separate import preserves original')
  p.locator('#projectExportBtn').click();p.wait_for_function('!projectTransferBusy');raw=p.evaluate("async()=>Array.from(new Uint8Array(await (await fetch(projectDownloadLink.href)).arrayBuffer()))")
  z=zipfile.ZipFile(io.BytesIO(bytes(raw)));m=json.loads(z.read('edit_project.json'));assert len(m['photos'])==45;assert m['appVersion']=='3.10.9';print('PASS project ZIP export')
+ # Stored settings must be reflected on reopen; mixed values must not be silently overwritten.
+ p.evaluate("async()=>{let ps=await orderedPhotosForJob(job);for(let p of ps){p.boardFields={job:false,contractor:false};await put('photos',p)}await openJob(job.id);await renderLedgerOrder()}")
+ assert not p.locator('#bulk_job').is_checked();assert not p.locator('#bulk_contractor').is_checked()
+ p.locator('#bulk_job').check();assert '未適用' in p.locator('#bulkFeedback').inner_text()
+ p.locator('#excelExportBtn').click();assert '未適用' in dialogs[-1]
+ answers[:]=[False];p.evaluate('applyBulkBoard()');assert p.evaluate("async()=> (await orderedPhotosForJob(job)).every(p=>p.boardFields.job===false)")
+ p.evaluate('applyBulkBoard()');p.wait_for_function('!bulkBoardDirty');assert p.evaluate("async()=> (await orderedPhotosForJob(job)).every(p=>p.boardFields.job===true && p.boardFields.contractor===false)")
+ p.evaluate("async()=>{let ps=await orderedPhotosForJob(job);ps[0].boardFields.job=false;ps[0].boardPos='left';await put('photos',ps[0]);await renderLedgerOrder()}")
+ assert p.locator('#bulk_job').evaluate('(e)=>e.indeterminate');assert p.locator('#bulkBoardPos').input_value()==''
+ p.locator('#bulk_date').uncheck();p.evaluate('applyBulkBoard()');p.wait_for_function('!bulkBoardDirty')
+ assert p.evaluate("async()=>{let ps=await orderedPhotosForJob(job);return ps[0].boardFields.job===false && ps[1].boardFields.job===true && ps[0].boardPos==='left' && ps[1].boardPos==='right' && ps.every(p=>p.boardFields.date===false)}")
+ p.reload();p.wait_for_function('!!db');p.evaluate("async()=>{let js=await all('jobs');await openJob(js.find(j=>j.name.includes('取り込み')).id);await renderLedgerOrder()}")
+ assert not p.locator('#bulk_date').is_checked();assert p.locator('#bulk_job').evaluate('(e)=>e.indeterminate')
+ # Observe the actual renderer calls used by Excel, while still rendering real images.
+ p.evaluate("()=>{window.boardCalls=[];let original=addBoardData;addBoardData=(...args)=>{boardCalls.push(args[4]);return original(...args)}}")
+ print('PASS stored/mixed settings, pending export block, cancellation, atomic apply, reload persistence')
  p.locator('#excelExportBtn').click();p.wait_for_function("!ledgerExportBusy && downloadReadyLink.download.endsWith('.xlsx')",timeout=120000)
  raw=p.evaluate("async()=>Array.from(new Uint8Array(await (await fetch(downloadReadyLink.href)).arrayBuffer()))");z=zipfile.ZipFile(io.BytesIO(bytes(raw)));assert z.testzip() is None
  assert len([n for n in z.namelist() if n.startswith('xl/media/photo')])==45
  sheet=ET.fromstring(z.read('xl/worksheets/sheet2.xml'));assert 'No.45' in ''.join(sheet.itertext());ns={'s':'http://schemas.openxmlformats.org/spreadsheetml/2006/main'};assert len(sheet.findall('s:rowBreaks/s:brk',ns))==14
- cover=ET.fromstring(z.read('xl/worksheets/sheet1.xml'));assert '施工会社' in ''.join(cover.find(".//s:c[@r='E27']",ns).itertext());print('PASS Ver43 Excel 45 images / 15 pages / E27 contractor (blackboard enabled)')
+ cover=ET.fromstring(z.read('xl/worksheets/sheet1.xml'));assert '施工会社' in ''.join(cover.find(".//s:c[@r='E27']",ns).itertext());assert p.evaluate('boardCalls.length===45 && boardCalls.every(f=>f.date===false && f.contractor===false)');print('PASS Ver43 Excel 45 images / 15 pages / E27 contractor (blackboard enabled)')
  p.evaluate('home()');load(b'not a zip');assert '読み込み失敗' in p.locator('#homeProjectTransferStatus').inner_text();assert p.locator('#homeProjectTransferStatus').is_visible();print('PASS invalid ZIP error visible on home')
  assert not errors,errors;b.close();print('ALL PASS; no browser JavaScript errors')
