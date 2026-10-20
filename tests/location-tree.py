@@ -1,7 +1,7 @@
 """Browser regressions for Issue #2; no production data or external server required."""
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-import os, subprocess
+import os, subprocess, base64
 ROOT = Path(__file__).resolve().parents[1]
 js = Path(os.environ['JSZIP_PATH']).read_bytes() if os.environ.get('JSZIP_PATH') else subprocess.check_output(['curl', '--fail', '--silent', '--show-error', 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'])
 with sync_playwright() as pw:
@@ -108,6 +108,27 @@ with sync_playwright() as pw:
     assert page.locator('[data-location-id="skip"]').count() == 1
     assert page.evaluate("async()=> (await all('photos')).length") == 3
     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
+    # Capture must serialize with deletion in both orders, including another stale tab.
+    assert page.evaluate("""async()=>{
+      try{await addLocationPhoto({jobId:'tree',locationId:'only',data:'stale'});return false}
+      catch(e){return e.message.includes('削除')}
+    }""")
+    assert page.evaluate("async()=> (await all('photos')).length") == 3
+    page.evaluate("addLocationPhoto({id:4,jobId:'tree',locationId:'new',data:'capture'})")
+    assert page.evaluate("removeEmptyLocation('tree','new')")['count'] == 1
+    assert page.evaluate("async()=> (await all('photos')).length") == 4
+    print('PASS capture/deletion serialization in both orders; stale capture cannot orphan photos')
+    page.evaluate("async()=>{selectLocation('a2');await selectTask(DEFAULT[0])}")
+    png=page.evaluate("()=>{let c=document.createElement('canvas');c.width=10;c.height=10;return c.toDataURL().split(',')[1]}")
+    page.locator('#cam').set_input_files({'name':'capture.png','mimeType':'image/png','buffer':base64.b64decode(png)})
+    page.wait_for_function("saved.textContent.startsWith('保存しました：')")
+    assert page.evaluate("async()=> (await all('photos')).filter(p=>p.jobId==='tree'&&p.locationId==='a2').length") == 2
+    page.locator('#editSelectedLocationBtn').click();page.locator('#lePlace').fill('更新後の盤前')
+    page.evaluate('saveLocationEdit()')
+    assert page.evaluate("async()=> (await all('photos')).filter(p=>p.jobId==='tree'&&p.locationId==='a2').every(p=>p.place==='更新後の盤前')")
+    assert page.locator('#locations .active').get_attribute('data-location-id') == 'a2'
+    print('PASS image file capture, persisted location link, shared location edit propagates to existing photos')
+
     assert not errors, errors
     browser.close()
     print('ALL PASS; concurrent photo recheck, latest job preservation, reload, mobile width, no browser errors')
