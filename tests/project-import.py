@@ -32,13 +32,18 @@ with sync_playwright() as pw:
  load(archive());assert p.locator('#job').is_visible();assert p.evaluate("async()=> (await all('photos')).length")==45
  assert p.evaluate("async()=> (await all('photos')).every(p=>p.locationId==='loc1'&&p.boardPos==='right')")
  p.evaluate("selectLocation('loc1')");assert p.locator('#locations .active').count()==1;assert p.locator('#editSelectedLocationBtn').is_enabled();print('PASS fresh import: job, location, 45 photos, metadata, blue selection and common edit button')
+ # Delete an unused location before exercising project round-trip and Excel regression.
+ p.evaluate("async()=>{job.locations.push({id:'unused',building:'空棟'});await put('jobs',job);renderLocations();selectLocation('unused');await deleteSelectedLocation();selectLocation('loc1')}")
+ assert p.evaluate("job.locations.length===1 && job.locations[0].id==='loc1'")
+ assert p.evaluate("async()=> (await all('photos')).length")==45
+ print('PASS unused location deletion before project ZIP / Excel / blackboard regressions')
  before=p.evaluate("async()=>JSON.stringify([await all('jobs'),await all('photos')])")
  answers[:]=[True,False];load(archive());assert p.evaluate("async()=>JSON.stringify([await all('jobs'),await all('photos')])")==before;print('PASS replacement cancellation preserves all data')
  answers[:]=[True,True];load(archive(True));assert p.evaluate("async()=>JSON.stringify([await all('jobs'),await all('photos')])")==before;print('PASS missing photo rejects before writes')
  answers[:]=[True,True];load(archive());assert p.evaluate("async()=> (await all('photos')).length")==45;assert any('最終確認' in d for d in dialogs);print('PASS confirmed replacement')
  answers[:]=[False];load(archive());assert p.evaluate("async()=> (await all('jobs')).length")==2;assert p.evaluate("async()=> (await all('photos')).length")==90;print('PASS separate import preserves original')
  p.locator('#projectExportBtn').click();p.wait_for_function('!projectTransferBusy');raw=p.evaluate("async()=>Array.from(new Uint8Array(await (await fetch(projectDownloadLink.href)).arrayBuffer()))")
- z=zipfile.ZipFile(io.BytesIO(bytes(raw)));m=json.loads(z.read('edit_project.json'));assert len(m['photos'])==45;assert m['appVersion']=='3.10.9';print('PASS project ZIP export')
+ z=zipfile.ZipFile(io.BytesIO(bytes(raw)));m=json.loads(z.read('edit_project.json'));assert len(m['photos'])==45;assert m['appVersion']=='3.10.10';print('PASS project ZIP export')
  # Stored settings must be reflected on reopen; mixed values must not be silently overwritten.
  p.evaluate("async()=>{let ps=await orderedPhotosForJob(job);for(let p of ps){p.boardFields={job:false,contractor:false};await put('photos',p)}await openJob(job.id);await renderLedgerOrder()}")
  assert not p.locator('#bulk_job').is_checked();assert not p.locator('#bulk_contractor').is_checked()
@@ -60,5 +65,15 @@ with sync_playwright() as pw:
  assert len([n for n in z.namelist() if n.startswith('xl/media/photo')])==45
  sheet=ET.fromstring(z.read('xl/worksheets/sheet2.xml'));assert 'No.45' in ''.join(sheet.itertext());ns={'s':'http://schemas.openxmlformats.org/spreadsheetml/2006/main'};assert len(sheet.findall('s:rowBreaks/s:brk',ns))==14
  cover=ET.fromstring(z.read('xl/worksheets/sheet1.xml'));assert '施工会社' in ''.join(cover.find(".//s:c[@r='E27']",ns).itertext());assert p.evaluate('boardCalls.length===45 && boardCalls.every(f=>f.date===false && f.contractor===false)');print('PASS Ver43 Excel 45 images / 15 pages / E27 contractor (blackboard enabled)')
+ p.evaluate('exportJob()');p.wait_for_function("!zipExportBusy && downloadReadyLink.download.endsWith('.zip')",timeout=120000)
+ raw=p.evaluate("async()=>Array.from(new Uint8Array(await (await fetch(downloadReadyLink.href)).arrayBuffer()))")
+ z=zipfile.ZipFile(io.BytesIO(bytes(raw)));assert z.testzip() is None
+ manifest=json.loads(z.read('photo_manifest.json'));assert len(manifest['photos'])==45
+ assert len([n for n in z.namelist() if n.endswith('.jpg')])==90
+ for item in manifest['photos']:
+  assert item['building']=='A棟' and '空棟' not in item['originalPath']
+  assert z.read(item['originalPath'])==base64.b64decode(image)
+  assert z.read(item['blackboardPath']).startswith(b'\xff\xd8')
+ print('PASS photo ZIP 45 original + 45 blackboard images, paths, intact original bytes after location deletion')
  p.evaluate('home()');load(b'not a zip');assert '読み込み失敗' in p.locator('#homeProjectTransferStatus').inner_text();assert p.locator('#homeProjectTransferStatus').is_visible();print('PASS invalid ZIP error visible on home')
  assert not errors,errors;b.close();print('ALL PASS; no browser JavaScript errors')
