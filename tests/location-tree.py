@@ -129,6 +129,60 @@ with sync_playwright() as pw:
     assert page.locator('#locations .active').get_attribute('data-location-id') == 'a2'
     print('PASS image file capture, persisted location link, shared location edit propagates to existing photos')
 
+    # Reproduce the review finding with real file decoding paused before persistence.
+    page.evaluate("""async()=>{
+      job.locations.push({id:'pending',building:'保存中の棟'},{id:'external',building:'他タブ削除'});
+      await put('jobs',job);selectLocation('pending');await selectTask(DEFAULT[0]);
+      window.realOriginalQuality=originalQuality;
+      originalQuality=async f=>{await new Promise(resolve=>window.finishImage=resolve);return realOriginalQuality(f)};
+    }""")
+    payload={'name':'delayed.png','mimeType':'image/png','buffer':base64.b64decode(png)}
+    page.locator('#cam').set_input_files(payload)
+    page.wait_for_function('photoSaveBusy && typeof finishImage === "function"')
+    assert page.locator('#deleteSelectedLocationBtn').is_disabled()
+    page.evaluate('deleteSelectedLocation()')
+    assert '写真を保存中' in dialogs[-1]
+    assert page.evaluate("async()=> (await all('jobs')).find(j=>j.id==='tree').locations.some(l=>l.id==='pending')")
+    # A tree rerender must not re-enable deletion during capture.
+    page.evaluate('renderLocations()')
+    assert page.locator('#deleteSelectedLocationBtn').is_disabled()
+    page.evaluate('finishImage()');page.wait_for_function('!photoSaveBusy')
+    assert page.evaluate("async()=> (await all('photos')).filter(p=>p.jobId==='tree'&&p.locationId==='pending').length") == 1
+    assert page.locator('#deleteSelectedLocationBtn').is_enabled()
+    assert page.locator('#cam').is_enabled()
+    print('PASS delete during real image decoding is blocked; photo saved with original location')
+    # Navigation while decoding must not retarget the pending photo or reopen the old job.
+    page.evaluate('finishImage=undefined')
+    page.locator('#cam').set_input_files(payload)
+    page.wait_for_function('photoSaveBusy && typeof finishImage === "function"')
+    page.evaluate("openJob('other')")
+    page.evaluate("selectLocation('solo')")
+    assert page.locator('#deleteSelectedLocationBtn').is_disabled()
+    page.evaluate('finishImage()');page.wait_for_function('!photoSaveBusy')
+    assert page.evaluate("job.id==='other' && loc.id==='solo'")
+    assert page.evaluate("async()=> (await all('photos')).filter(p=>p.jobId==='tree'&&p.locationId==='pending').length") == 2
+    assert page.evaluate("async()=> (await all('photos')).filter(p=>p.jobId==='other').length") == 1
+    print('PASS navigation during decoding keeps photo tied to original job/location')
+    # Another tab can delete before a photo is committed: report it without JS errors or orphans.
+    page.evaluate("async()=>{await openJob('tree');selectLocation('external');await selectTask(DEFAULT[0]);finishImage=undefined}")
+    page.locator('#cam').set_input_files(payload)
+    page.wait_for_function('photoSaveBusy && typeof finishImage === "function"')
+    assert page.evaluate("removeEmptyLocation('tree','external')").get('job')
+    page.evaluate('finishImage()');page.wait_for_function('!photoSaveBusy')
+    assert '写真を保存できませんでした' in dialogs[-1] and '場所は削除' in dialogs[-1]
+    assert page.evaluate("async()=> (await all('photos')).filter(p=>p.locationId==='external').length") == 0
+    assert page.locator('#cam').evaluate('(e)=>e.files.length') == 1
+    # Decoder failures must also release the lock, so the next capture/deletion can proceed.
+    page.evaluate("async()=>{selectLocation('pending');await selectTask(DEFAULT[0]);originalQuality=async()=>{throw new Error('画像読込テスト')}}")
+    page.locator('#cam').set_input_files(payload);page.wait_for_function('!photoSaveBusy')
+    assert '画像読込テスト' in dialogs[-1]
+    assert page.locator('#deleteSelectedLocationBtn').is_enabled()
+    assert page.locator('#cam').is_enabled()
+    page.evaluate('()=>{originalQuality=realOriginalQuality}')
+    page.locator('#cam').set_input_files(payload);page.wait_for_function('!photoSaveBusy && cam.value === ""')
+    assert page.evaluate("async()=> (await all('photos')).filter(p=>p.jobId==='tree'&&p.locationId==='pending').length") == 3
+    print('PASS external deletion and decoder failures are handled; file retained, lock released, retry succeeds')
+
     assert not errors, errors
     browser.close()
     print('ALL PASS; concurrent photo recheck, latest job preservation, reload, mobile width, no browser errors')

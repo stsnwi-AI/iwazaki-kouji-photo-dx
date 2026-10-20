@@ -30,6 +30,11 @@ function photoFilename(p,vals){let d=new Date(p.time||Date.now());return [fmt(d)
 const locationFields=['building','floor','room','place'];
 const locationCollator=new Intl.Collator('ja',{numeric:true,sensitivity:'base'});
 let locationTreeJobId=null;
+let photoSaveBusy=false;
+function updateLocationDeleteButton(){
+ deleteSelectedLocationBtn.disabled=!loc||photoSaveBusy;
+ deleteSelectedLocationBtn.textContent=photoSaveBusy?'⏳ 写真を保存中…（場所の削除は保存後）':'🗑 選択中の場所を削除';
+}
 const closedLocationPaths=new Set();
 function renderLocations(){
  if(locationTreeJobId!==job.id){closedLocationPaths.clear();locationTreeJobId=job.id}
@@ -67,7 +72,7 @@ function renderLocations(){
  }
  draw(locations,root);
  if(!job.locations.length)locations.innerHTML='<div class="empty">まだ場所がありません。</div>';
- editSelectedLocationBtn.disabled=deleteSelectedLocationBtn.disabled=!loc;
+ editSelectedLocationBtn.disabled=!loc;updateLocationDeleteButton();
  locHint.textContent=job.locations.length?'棟・階数・部屋名をタップして展開／折りたたみ、場所を青く選択してください。写真がある場所は削除できません。':'棟・階数・部屋名・場所／区画のいずれかを入力してください。';
 }
 // Read current job and linked photos, then update only the job in one serialized transaction.
@@ -104,9 +109,11 @@ function addLocationPhoto(record){
 }
 async function deleteSelectedLocation(){
  if(!job||!loc)return;
+ if(photoSaveBusy){alert('写真を保存中です。保存が終わってから場所を削除してください。');return}
  const jobId=job.id,id=loc.id,label=locationText(loc);
  try{
   const count=(await all('photos')).filter(p=>p.jobId===jobId&&p.locationId===id).length;
+  if(photoSaveBusy){alert('写真を保存中です。保存が終わってから場所を削除してください。');return}
   if(count){alert('「'+label+'」には撮影済み写真が'+count+'枚あります。写真を保護するため、この場所は削除できません。');return}
   if(!confirm('「'+label+'」を削除しますか？\n撮影済み写真：0枚。削除後は元に戻せません。'))return;
   const result=await removeEmptyLocation(jobId,id);
@@ -123,7 +130,35 @@ function editLocation(id){let l=job?.locations.find(x=>x.id===id);if(!l)return;l
 function cancelLocationEdit(){locationEditBox.classList.add('hidden')}
 async function saveLocationEdit(){let l=job?.locations.find(x=>x.id===locationEditId.value);if(!l)return;let v={building:leBuilding.value.trim(),floor:leFloor.value.trim(),room:leRoom.value.trim(),place:lePlace.value.trim()};if(!Object.values(v).some(Boolean))return alert('場所情報を1項目以上入力してください。');let old=locationText(l),next=locationText(v),affected=(await all('photos')).filter(p=>p.jobId===job.id&&p.locationId===l.id);if(!confirm('「'+old+'」を「'+next+'」へ変更します。\n撮影済み写真 '+affected.length+'枚と今後の撮影、黒板・ZIP・Excel出力に反映します。\nよろしいですか？'))return;let previous={building:l.building||'',floor:l.floor||'',room:l.room||'',place:l.place||''};Object.assign(l,v);try{await put('jobs',job);for(let p of affected){Object.assign(p,v);p.filename=photoFilename(p,v);await put('photos',p)}}catch(err){Object.assign(l,previous);alert('保存中に問題が発生しました。再度確認してください：'+err.message);return}loc=loc?.id===l.id?l:loc;renderLocations();if(loc){selectedPlace.innerHTML='<b>選択中：</b>'+e(locationText(loc));if(task)await selectTask(task);else await renderLedgerOrder()}else await renderLedgerOrder();locationEditBox.classList.add('hidden');locationEditFeedback.textContent='✓ 「'+old+'」を「'+next+'」に変更しました。撮影済み写真'+affected.length+'枚へ反映済みです。';locationEditFeedback.classList.remove('hidden');locationEditFeedback.scrollIntoView({behavior:'smooth',block:'nearest'})}
 async function addLocation(){let b=nb.value.trim(),f=nf.value.trim(),r=nr.value.trim(),p=np.value.trim();if(!b&&!f&&!r&&!p)return alert('棟・階数・部屋名・場所／区画のうち、1項目以上入力してください。');job.locations.push({id:'l'+Date.now(),building:b,floor:f,room:r,place:p});await put('jobs',job);nb.value=nf.value=nr.value=np.value='';renderLocations()}function goTask(){if(!loc){alert('先に②の場所を選択してください。');locCard.scrollIntoView({behavior:'smooth'});return}taskCard.scrollIntoView({behavior:'smooth'})}function selectLocation(id){cancelLocationEdit();loc=job.locations.find(x=>x.id===id);task=null;renderLocations();renderTasks();selectedPlace.innerHTML='<b>選択中：</b>'+e([loc.building,loc.floor,loc.room,loc.place].filter(Boolean).join('｜')||'場所未設定');taskCard.classList.remove('hidden');capture.classList.add('hidden')}function renderTasks(){tasks.innerHTML=(job?.tasks||DEFAULT).map(t=>`<button class="task ${task===t?'active':''}" onclick="selectTask('${e(t)}')">${e(t)}</button>`).join('')}async function addTask(){let t=nt.value.trim();if(!t)return;job.tasks.push(t);await put('jobs',job);nt.value='';renderTasks()}async function selectTask(t){if(!loc)return;task=t;let noPhase=NO_PHASE.includes(t);phaseWrap.classList.toggle('hidden',noPhase);summary.innerHTML='<b>この条件で撮影します</b><br>現場：'+e(job.name)+[loc.building?'棟：'+e(loc.building):'',loc.floor?'階数：'+e(loc.floor):'',loc.room?'部屋名：'+e(loc.room):'',loc.place?'場所・区画：'+e(loc.place):''].filter(Boolean).map(x=>'<br>'+x).join('')+'<br>作業：'+e(t)+(noPhase?'<br><b>※この作業は施工段階の選択不要です</b>':'');capture.classList.remove('hidden');capture.scrollIntoView({behavior:'smooth'});await renderPhotos()}async function renderPhotos(){let a=(await all('photos')).filter(p=>p.jobId===job.id&&p.locationId===loc.id&&p.task===task).sort((a,b)=>b.time-a.time);pc.textContent='この条件の撮影済み：'+a.length+'枚';pg.innerHTML=a.map(p=>`<div class="photoItem"><img src="${p.data}"><div class="small">${e(p.phase)}</div><button class="photoDelete" onclick="deletePhoto(${p.id})">🗑 写真を削除</button></div>`).join('')}let returningFromCamera=false;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&returningFromCamera){returningFromCamera=false;setTimeout(restoreCapturePosition,150)}});function restoreCapturePosition(){if(!job||!loc||!task)return;show('job');capture.classList.remove('hidden');requestAnimationFrame(()=>{capture.scrollIntoView({behavior:'instant',block:'start'});setTimeout(()=>{if(job&&loc&&task&&document.visibilityState==='visible')capture.scrollIntoView({behavior:'instant',block:'start'})},200)})}
-async function photo(ev){let f=ev.target.files[0];if(!f||!loc||!task){returningFromCamera=false;return;}returningFromCamera=false;show('job');capture.classList.remove('hidden');restoreCapturePosition();let d=new Date(),ph=NO_PHASE.includes(task)?'':phase.value,co=comment.value.trim(),data=await originalQuality(f),ps=await all('photos'),seq=ps.filter(p=>p.jobId===job.id&&p.locationId===loc.id&&p.task===task).length+1,parts=[fmt(d),loc.building,loc.floor,loc.room,loc.place,task,ph,String(seq).padStart(3,'0')].filter(Boolean).map(safe),fn=parts.join('_')+'.jpg';try{await addLocationPhoto({jobId:job.id,jobName:job.name,locationId:loc.id,building:loc.building||'',floor:loc.floor,room:loc.room,place:loc.place,task,phase:ph,comment:co,filename:fn,time:Date.now(),data,boardPos:(boardPos?.value||'left'),boardSize:(boardSize?.value||currentBoardSize())})}catch(err){alert('写真を保存できませんでした：'+err.message);return}comment.value='';ev.target.value='';saved.textContent='保存しました：'+[loc.building,loc.floor,loc.room,loc.place,task,ph].filter(Boolean).join('｜');saved.classList.remove('hidden');await renderPhotos();renderToday();renderLedgerOrder();restoreCapturePosition()}async function deletePhoto(id){let p=(await all('photos')).find(x=>x.id===id);if(!p)return;if(!confirm('この写真を削除しますか？\n削除した写真はZIP出力にも含まれません。'))return;await new Promise((ok,ng)=>{let r=db.transaction('photos','readwrite').objectStore('photos').delete(id);r.onsuccess=()=>ok();r.onerror=()=>ng(r.error)});saved.textContent='写真を削除しました。';saved.classList.remove('hidden');if(loc&&task)await renderPhotos();await renderToday();await renderLedgerOrder()}
+async function photo(ev){
+ const input=ev.target,f=input.files[0];
+ if(!f||!job||!loc||!task){returningFromCamera=false;return}
+ if(photoSaveBusy){alert('写真を保存中です。保存が終わってから次の写真を選択してください。');return}
+ // Capture identity and settings before decoding, which can finish after navigation.
+ const captureJob={id:job.id,name:job.name},captureLoc={...loc},captureTask=task;
+ const d=new Date(),ph=NO_PHASE.includes(captureTask)?'':phase.value,co=comment.value.trim();
+ const captureBoardPos=boardPos?.value||'left',captureBoardSize=boardSize?.value||currentBoardSize();
+ photoSaveBusy=true;cam.disabled=true;updateLocationDeleteButton();returningFromCamera=false;
+ show('job');capture.classList.remove('hidden');restoreCapturePosition();
+ try{
+  const data=await originalQuality(f),ps=await all('photos');
+  const seq=ps.filter(p=>p.jobId===captureJob.id&&p.locationId===captureLoc.id&&p.task===captureTask).length+1;
+  const parts=[fmt(d),captureLoc.building,captureLoc.floor,captureLoc.room,captureLoc.place,captureTask,ph,String(seq).padStart(3,'0')].filter(Boolean).map(safe);
+  await addLocationPhoto({jobId:captureJob.id,jobName:captureJob.name,locationId:captureLoc.id,building:captureLoc.building||'',floor:captureLoc.floor,room:captureLoc.room,place:captureLoc.place,task:captureTask,phase:ph,comment:co,filename:parts.join('_')+'.jpg',time:d.getTime(),data,boardPos:captureBoardPos,boardSize:captureBoardSize});
+  input.value='';
+  if(job?.id===captureJob.id){
+   saved.textContent='保存しました：'+[captureLoc.building,captureLoc.floor,captureLoc.room,captureLoc.place,captureTask,ph].filter(Boolean).join('｜');saved.classList.remove('hidden');
+   if(loc?.id===captureLoc.id&&task===captureTask){
+    if(comment.value.trim()===co)comment.value='';
+    await renderPhotos();restoreCapturePosition();
+   }
+   await renderLedgerOrder();
+  }
+  await renderToday();
+ }catch(err){alert('写真を保存できませんでした：'+err.message)}
+ finally{photoSaveBusy=false;cam.disabled=false;updateLocationDeleteButton()}
+}
+async function deletePhoto(id){let p=(await all('photos')).find(x=>x.id===id);if(!p)return;if(!confirm('この写真を削除しますか？\n削除した写真はZIP出力にも含まれません。'))return;await new Promise((ok,ng)=>{let r=db.transaction('photos','readwrite').objectStore('photos').delete(id);r.onsuccess=()=>ok();r.onerror=()=>ng(r.error)});saved.textContent='写真を削除しました。';saved.classList.remove('hidden');if(loc&&task)await renderPhotos();await renderToday();await renderLedgerOrder()}
 async function orderedPhotosForJob(j){let ps=(await all('photos')).filter(p=>p.jobId===j.id);return ps.sort((a,b)=>{let ao=Number.isFinite(a.ledgerOrder)?a.ledgerOrder:null,bo=Number.isFinite(b.ledgerOrder)?b.ledgerOrder:null;if(ao!==null&&bo!==null)return ao-bo;if(ao!==null)return -1;if(bo!==null)return 1;return (a.time||0)-(b.time||0)||(a.id||0)-(b.id||0)})}async function renderLedgerOrder(){if(!job)return;let ps=await orderedPhotosForJob(job);renderBulkBoard(ps);photoOrderList.innerHTML=ps.length?ps.map((p,i)=>`<div class="orderItem"><div class="orderPhoto"><img class="thumb" src="${p.data}" alt="写真 ${i+1}"></div><div class="grow"><b class="orderTitle">${i+1}. ${e(String(p.task||'').replace(/^\d+_/,''))}</b><div class="small orderLocation">${e([...Object.values(effectiveLocation(p)),p.phase].filter(Boolean).join('｜'))}</div>${p.comment?`<div class="small orderComment">${e(p.comment)}</div>`:''}</div><div class="orderBtns"><button class="secondary" onclick="movePhotoOrder(${p.id},-1)" ${i===0?'disabled':''}>↑</button><button class="secondary" onclick="movePhotoOrder(${p.id},1)" ${i===ps.length-1?'disabled':''}>↓</button><button class="secondary" onclick="editPhoto(${p.id})">編集</button><button class="danger" onclick="deletePhoto(${p.id})">削除</button></div></div>`).join(''):'<div class="empty">④で写真を撮影すると、ここに写真が表示されます。</div>'}
 let photoMoveBusy=false;
 async function movePhotoOrder(id,d){if(photoMoveBusy||!job)return;photoMoveBusy=true;const feedback=document.getElementById('orderFeedback');feedback.textContent='⏳ 写真を移動中…';const buttons=document.querySelectorAll('#photoOrderList .orderBtns button');buttons.forEach(b=>b.disabled=true);await nextPaint();try{let ps=await orderedPhotosForJob(job),i=ps.findIndex(p=>p.id===id),j=i+d;if(i<0||j<0||j>=ps.length)return;let a=ps[i],b=ps[j];let ao=Number.isFinite(a.ledgerOrder)?a.ledgerOrder:(i+1)*1000,bo=Number.isFinite(b.ledgerOrder)?b.ledgerOrder:(j+1)*1000;if(ps.some(p=>!Number.isFinite(p.ledgerOrder))||ao===bo){for(let k=0;k<ps.length;k++){ps[k].ledgerOrder=(k+1)*1000;await put('photos',ps[k])}ao=ps[i].ledgerOrder;bo=ps[j].ledgerOrder}a.ledgerOrder=bo;b.ledgerOrder=ao;await Promise.all([put('photos',a),put('photos',b)]);await renderLedgerOrder();feedback.textContent='✓ 写真を'+(d<0?'上':'下')+'へ移動しました';}catch(err){feedback.textContent='⚠️ 移動に失敗しました';alert('写真の移動に失敗しました：'+err.message)}finally{photoMoveBusy=false;document.querySelectorAll('#photoOrderList .orderBtns button').forEach(b=>{if(b.textContent==='↑'||b.textContent==='↓'){let row=b.closest('.orderItem');let rows=[...document.querySelectorAll('#photoOrderList .orderItem')];b.disabled=(b.textContent==='↑'&&row===rows[0])||(b.textContent==='↓'&&row===rows[rows.length-1]);}else b.disabled=false})}}
