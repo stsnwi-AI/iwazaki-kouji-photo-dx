@@ -43,7 +43,7 @@ with sync_playwright() as pw:
  answers[:]=[True,True];load(archive());assert p.evaluate("async()=> (await all('photos')).length")==45;assert any('最終確認' in d for d in dialogs);print('PASS confirmed replacement')
  answers[:]=[False];load(archive());assert p.evaluate("async()=> (await all('jobs')).length")==2;assert p.evaluate("async()=> (await all('photos')).length")==90;print('PASS separate import preserves original')
  p.locator('#projectExportBtn').click();p.wait_for_function('!projectTransferBusy');raw=p.evaluate("async()=>Array.from(new Uint8Array(await (await fetch(projectDownloadLink.href)).arrayBuffer()))")
- z=zipfile.ZipFile(io.BytesIO(bytes(raw)));m=json.loads(z.read('edit_project.json'));assert len(m['photos'])==45;assert m['appVersion']=='3.10.10';print('PASS project ZIP export')
+ z=zipfile.ZipFile(io.BytesIO(bytes(raw)));m=json.loads(z.read('edit_project.json'));assert len(m['photos'])==45;assert m['appVersion']=='3.10.11';print('PASS project ZIP export')
  # Stored settings must be reflected on reopen; mixed values must not be silently overwritten.
  p.evaluate("async()=>{let ps=await orderedPhotosForJob(job);for(let p of ps){p.boardFields={job:false,contractor:false};await put('photos',p)}await openJob(job.id);await renderLedgerOrder()}")
  assert not p.locator('#bulk_job').is_checked();assert not p.locator('#bulk_contractor').is_checked()
