@@ -384,9 +384,9 @@ function ledgerPreflightData(ordered,currentJob){
 // V3.10.14: show issues only when Excel export is requested.
 function showLedgerExportIssues(report){
  if(!report.warnings.length)return true;
- const message=(report.blocking?'【出力できない問題があります】':'【出力前の確認事項】')+'\\n\\n'+report.warnings.map(w=>'・'+w).join('\\n');
- if(report.blocking){alert(message+'\\n\\n問題を修正してから再度お試しください。');return false;}
- return confirm(message+'\\n\\nこのままExcelを作成しますか？');
+ const message=(report.blocking?'【出力できない問題があります】':'【出力前の確認事項】')+'\n\n'+report.warnings.map(w=>'・'+w).join('\n');
+ if(report.blocking){alert(message+'\n\n問題を修正してから再度お試しください。');return false;}
+ return confirm(message+'\n\nこのままExcelを作成しますか？');
 }
 let ledgerExportBusy=false;
 async function exportLedgerExcel(){
