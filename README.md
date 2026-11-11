@@ -1,3 +1,11 @@
+## V3.10.60（開発候補・検証前／2026-11-11）
+- Excel台帳のNo.をシートごとにリセットせず、棟・シートをまたいで連番に変更。空欄を含む台帳枠と画面プレビューの番号規則を一致させる。
+- Excelに埋め込む写真だけを、電子黒板合成後に長辺1920px以下・JPEG品質0.85で軽量化。
+- 元写真、IndexedDB、編集用ZIP、撮影品質、Ver43テンプレートおよび既存の3枠/ページは維持。
+- 調査対象：利用者のExcel出力約58MB、写真13枚。縮小時の容量は参考試験値でありアプリ実測値ではない。
+- ソースを機能専用ブランチへ反映済み。ブラウザ実出力、連番、画質、ファイル容量、印刷は未検証。develop/mainへのマージなし。
+- V3.10.59で承認済みの高解像度左右背景は維持。
+
 ## V3.10.59 (feature branch / 2026-11-11; image upload pending)
 - Generated construction image 1672x941; crop high-resolution left and right sides as construction-side-left-v59.jpg / construction-side-right-v59.jpg (440x941 each).
 - No blur or white overlay; central white area and mobile hidden background maintained. V3.10.59 / 459dev1 used for UI and PWA.
