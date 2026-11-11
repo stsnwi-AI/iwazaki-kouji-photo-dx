@@ -5,7 +5,7 @@
 - 工事番号・住所・工事区分・写真枚数を、既存のjobs/photosデータから表示。架空の進行状況や更新日は付与しない。
 - 既存の`openJob()`、`show('new')`、`renderJobs()`、`renderToday()`の入口を保持し、他の画面のレイアウト、IndexedDB iwasaki_v2 version 2、Excel Ver43、3列写真台帳、改ページボタン、写真・現場データ、ZIP、電子黒板を維持。
 - 本番main V3.10.48には未反映。GitHub developで試作し、ユーザーのスマホ/iPad/PC確認後に公開可否を判断。
-- JavaScript構文・DOM構造の静的検査済み。実機の操作、写真枚数と画面遷移は未検証。
+- JavaScript構文・DOM構造の静的検査済み。描画後の写真枚数集計を実行して非同期描画順の競合を回避。実機の操作、写真枚数と画面遷移は未検証。
 
 ---
 

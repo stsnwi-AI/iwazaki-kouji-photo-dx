@@ -194,6 +194,7 @@ const DEFAULT=['01_受変電設備','02_分電盤','03_照明器具','04_コン�
   const mode=j.photoMode==='js-building-electrical'?'公共工事（試験版）':'一般・雑工事';
   return '<button type="button" class="smartJobCard" data-home-job-id="'+e(String(j.id))+'" onclick="openJob(\''+String(j.id).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')"><span class="smartJobIcon" aria-hidden="true">▤</span><span class="smartJobContent"><span class="smartJobName">'+e(j.name||'現場名未設定')+'</span><span class="smartJobMeta">'+e([j.no?'工事番号 '+j.no:'',j.address||''].filter(Boolean).join(' ／ ')||'工事番号・場所未設定')+'</span><span class="smartJobBottom"><span class="smartJobType">'+e(mode)+'</span><span class="smartPhotoCount" data-job-photo-count="'+e(String(j.id))+'">写真枚数を確認中</span></span></span><span class="smartJobArrow" aria-hidden="true">›</span></button>';
  }).join('');
+ await renderToday(); // populate each card after cards are in the DOM
 }
 async function renderToday(){
  let p=await all('photos'),d=fmt(new Date());
