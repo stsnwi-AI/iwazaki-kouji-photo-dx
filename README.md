@@ -1,3 +1,9 @@
+## V3.10.59 (feature branch / 2026-11-11; image upload pending)
+- Generated construction image 1672x941; crop high-resolution left and right sides as construction-side-left-v59.jpg / construction-side-right-v59.jpg (440x941 each).
+- No blur or white overlay; central white area and mobile hidden background maintained. V3.10.59 / 459dev1 used for UI and PWA.
+- IMPORTANT: Image assets are not yet committed to this branch. Do not merge to develop or deploy until both image files are present and verified.
+- Existing camera, blackboard, ledger, Excel Ver43, ZIP and IndexedDB logic unchanged.
+
 ## V3.10.58 (develop, 2026-11-11)
 - PC／iPadの左右背景から白い重ね色とCSSぼかしを除去し、背景写真をそのまま表示する。中央の操作領域は白のまま、スマホ（幅759px以下）の背景非表示を維持。
 - 画面・manifest・Service Workerの版番号をV3.10.58、キャッシュ識別子を458dev1に更新。撮影、台帳3列、電子小黒板、Excel Ver43、ZIP、IndexedDBは変更なし。
