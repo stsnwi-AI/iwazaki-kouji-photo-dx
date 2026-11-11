@@ -237,7 +237,7 @@
 /* V3.10.57: clearer construction scenery outside the central app only. */
 @media(min-width:760px){
  body{background:#e9f1f6}
- body::before{content:"";position:fixed;inset:-9px;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(235,244,251,.06),rgba(235,244,251,.12)),url("./construction-side-background.jpg");background-position:center center;background-repeat:no-repeat;background-size:cover;filter:blur(2px);opacity:.90}
+ body::before{content:"";position:fixed;inset:-9px;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(235,244,251,.06),rgba(235,244,251,.12)),url("./construction-side-background.jpg");background-position:center center;background-repeat:no-repeat;background-size:cover;filter:blur(2px) contrast(1.15) saturate(1.18);opacity:.90}
  main{position:relative;z-index:1;max-width:760px;background:rgba(250,252,254,.985);box-shadow:0 0 28px rgba(22,56,81,.10);min-height:calc(100dvh - 105px);border-left:1px solid #e0eaf1;border-right:1px solid #e0eaf1}
  header{z-index:6}
  .smartBottomNav{z-index:10}
