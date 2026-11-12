@@ -1391,7 +1391,7 @@ function drawingXml(chunk){
     const font=originalFont.cloneNode(true);
     // Conservative width estimate for merged D:L; Excel shrinkToFit further
     // reduces text at render-time when proportional fonts or glyphs differ.
-    const units=Array.from(String(rawText||'')).reduce((sum,ch)=>sum+(/[\\u0020-\\u007e\\uff61-\\uff9f]/.test(ch)?0.55:1),0);
+    const units=Array.from(String(rawText||'')).reduce((sum,ch)=>sum+(/[\u0020-\u007e\uff61-\uff9f]/.test(ch)?0.55:1),0);
     const size=Math.max(4,Math.min(14,Math.floor((14*19/Math.max(1,units))*2)/2));
     let sz=font.getElementsByTagNameNS(NS,'sz')[0];
     if(!sz){sz=stylesDoc.createElementNS(NS,'sz');font.insertBefore(sz,font.firstChild)}
