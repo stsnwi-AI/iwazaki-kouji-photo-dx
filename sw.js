@@ -1,4 +1,4 @@
-const CACHE='iwasaki-photo-dx-v468dev1';
+const CACHE='iwasaki-photo-dx-v469dev1';
 const ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./construction-side-background.jpg','./construction-side-left-v59.jpg','./construction-side-right-v59.jpg','./apple-touch-icon.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
