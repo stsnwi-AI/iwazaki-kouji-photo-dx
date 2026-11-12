@@ -1073,7 +1073,7 @@ function addBoardData(data,info,pos,size,fields){if(info.photoMode===JS_PHOTO_MO
 // V3.10.70: Extend No.1 photo to 8px above the bottom of Excel row 12 (next No. slot begins row 13).
 // The photo's pixel proportions are intentionally adjusted to fill the revised box,
 // as requested. Original photos, ZIP data and Ver43 workbook template remain untouched.
-const VER43_FRAME_WIDTH_EMU=4318000,VER43_FRAME_HEIGHT_EMU=3451860;
+const VER43_FRAME_WIDTH_EMU=4318000,VER43_FRAME_HEIGHT_EMU=3528060;
 function prepareExcelImage(data,maxEdge=1920,quality=0.85){return new Promise((resolve,reject)=>{
  const im=new Image();im.onload=()=>{try{
   const w=im.naturalWidth||im.width,h=im.naturalHeight||im.height;
