@@ -1326,11 +1326,11 @@ async function exportLedgerExcel(){
   if(n===1){row.remove();continue}
   row.setAttribute('r',String(n-1));
   for(const c of row.getElementsByTagNameNS(NS,'c')){
-   c.setAttribute('r',c.getAttribute('r').replace(/(\\d+)$/,(_,v)=>String(Number(v)-1)));
+   c.setAttribute('r',c.getAttribute('r').replace(/(\d+)$/,(_,v)=>String(Number(v)-1)));
   }
  }
  for(const m of d.getElementsByTagNameNS(NS,'mergeCell')){
-  m.setAttribute('ref',m.getAttribute('ref').replace(/(\\d+)/g,(_,v)=>String(Number(v)-1)));
+  m.setAttribute('ref',m.getAttribute('ref').replace(/(\d+)/g,(_,v)=>String(Number(v)-1)));
  }
  // Ver43の11行/写真・3枚/ページを維持して、13枚目以降の行と結合セルを増設する。
  if(chunk.length>12){let data=d.getElementsByTagNameNS(NS,'sheetData')[0],merges=d.getElementsByTagNameNS(NS,'mergeCells')[0];
